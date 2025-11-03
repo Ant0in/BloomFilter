@@ -1,10 +1,12 @@
 
+from __future__ import annotations
+
 from .universal_hash import UniversalHash
 from .hash_factory import HashFactory
 
 from bitarray import bitarray
 from typing import List, Optional
-from __future__ import annotations
+
 
 
 class BloomFilter:
