@@ -13,8 +13,7 @@
 Welcome to my **Bloom Filter** project ! This project is part of the **Randomized Algorithms INFO—F413** at `ULB`. It implements a **Bloom filter** along with a **Hash Factory**, enabling efficient probabilistic membership queries!
 
 <div align="center">
-  <img src="res/FP_vs_k.png" alt="demo" width="400"/>
-  <p><b>Bloom Filter</b> false positive tested <b><code>experimentally</code></b></p>
+  <img src="res/intro.jpg" alt="bloom filter" width="400"/>
 </div>
 
 ## 📜 Description
@@ -25,7 +24,7 @@ This Python project provides:
 - A **Hash Factory** for generating independent **universal hash functions**.
 - Methods to **add** elements and **check membership** with probabilistic guarantees.
 
-For more detailed problem specifications and additional information, please refer to: [**`doc/BloomAssignment.pdf`**](doc/BloomAssignment.pdf).
+For more detailed problem specifications and additional information, please refer to the project specification [**`doc/BloomAssignment.pdf`**](doc/BloomAssignment.pdf) or to the report [**`doc/infof413_report.pdf`**](doc/infof413_report.pdf).
 
 ## ⚙️ Installation
 
@@ -58,4 +57,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ## 🙏 Acknowledgements
 
-This project was developed for the **`Randomized algorithms`** course **`INFO—F413`**. Special thanks to `*Jean Cardinal* (ULB)` for their guidance and support.
+This project was developed for the **`Randomized algorithms`** course **`INFO—F413`**. Special thanks to **`Jean Cardinal (ULB)`** for their guidance and support.

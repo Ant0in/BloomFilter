@@ -1,0 +1,364 @@
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{subfig}
+\usepackage{float}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{booktabs}
+\usepackage{tabularx}
+
+% ====================== LISTINGS ======================
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,        % typewriter font, smaller size
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{orange},
+    commentstyle=\color{gray}\itshape,
+    numbers=left,                      % show line numbers on the left
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,                       % number every line
+    numbersep=8pt,
+    backgroundcolor=\color{gray!5},    % light gray background
+    frame=single,                       % put a frame around the code
+    breaklines=true,                    % allow line breaking
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b                        % caption at bottom
+}
+
+
+% ====================== HEADER ======================
+
+\pagestyle{fancy}
+
+\fancyhf{}
+\fancyhead[L]{\textbf{INFO—F413 : Bloom Filters Project}}
+\fancyhead[R]{\textbf{Berthion Antoine}}
+\fancyfoot[C]{\thepage}
+
+% ====================== TITLE ======================
+
+\title{\textbf{INFO—F413} \\
+Randomized Algorithms — Bloom Filters \\ 
+Project Report}
+\author{Berthion Antoine — 566199}
+\date{3 November 2025}
+
+\begin{document}
+
+% ====================== FRONT PAGE ======================
+
+\maketitle
+
+\vspace{-2em}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{intro.jpg}
+    \label{fig:intro}
+    % \caption{...}
+\end{figure}
+
+\vspace{-1em}
+
+% ====================== CONTENT ======================
+
+\section*{Abstract}
+
+\noindent This project presents the implementation of a \textit{hash factory} and a \textit{Bloom filter}. We provide both \textbf{theoretical} and \textbf{experimental} analyses of their performance, establishing formal \textit{bounds} and \textit{guarantees} on efficiency. Additionally, we discuss \textbf{design choices}, \textbf{implementation details}, and the \textit{trade-offs} encountered during development.
+
+\section{Introduction}
+\label{section:intro}
+
+\noindent In numerous computational contexts, determining whether an element belongs to a given set is fundamental. Efficiently solving this \textit{membership problem} is critical in applications ranging from large-scale databases to network systems. A standard approach relies on \textbf{hash tables}, which support constant-time (\(O(1)\)) membership queries by storing hashed representations of elements. However, when dealing with very large datasets, even storing all hash values can become memory-intensive. \\
+
+\noindent To address these limitations, \textbf{randomized algorithms} offer a practical alternative. These methods accept a small probability of error in exchange for reduced space or faster execution, striking a balance between precision and efficiency. \\
+
+\noindent \textbf{Bloom filters} exemplify this approach. They answer membership queries with either \textit{definitely not present} or \textit{possibly present}. This behavior is particularly useful in large-scale systems: a Bloom filter can pre-check whether an element exists in a database. If the filter indicates absence, the costly lookup can be skipped; if it indicates presence, the query proceeds, with a small chance of a false positive.
+
+\section{Formalisation}
+\label{section:formalisation}
+
+\noindent We now formalize the membership problem, the probabilistic framework, and the structure of Bloom filters.
+
+\subsection{Membership Problem}
+
+\noindent Let \( U \) denote a finite universe of possible elements, and let \( S \subseteq U \) be the set to store. The goal is to design a data structure supporting the query operation:
+
+\begin{equation}
+\texttt{query}(x) =
+\begin{cases}
+    \texttt{true}, & \text{if } x \in S,\\[2pt]
+    \texttt{false}, & \text{if } x \notin S.
+\end{cases}
+\end{equation}
+
+\noindent Deterministic structures such as hash tables provide exact answers in \(O(1)\) expected time but require memory proportional to \(|S|\). When \(|S|\) is very large, storing all elements becomes impractical, motivating probabilistic alternatives.
+
+\subsection{Probabilistic Relaxation}
+
+\noindent A \textbf{randomized algorithm} introduces controlled uncertainty to improve efficiency. In this setting, we allow a small probability \(\varepsilon\) of returning a \textit{false positive}—indicating that an element is present when it is not—but no \textit{false negatives}. Formally, for a randomized structure \(B\):
+\begin{equation}
+\Pr[B.\texttt{query}(x) = \texttt{true} \mid x \notin S] = \varepsilon,
+\quad
+\Pr[B.\texttt{query}(x) = \texttt{false} \mid x \in S] = 0.
+\end{equation}
+
+\noindent The parameter \(\varepsilon\) quantifies the trade-off between memory usage and accuracy.
+
+\subsection{Bloom Filter Model}
+
+\noindent A \textbf{Bloom filter} stores \(S\) using a bit array \(A\) of size \(m\) and \(k\) independent hash functions
+
+\[
+h_i : U \to \{0, \dots, m-1\}, \quad 1 \le i \le k.
+\]
+
+\noindent For each element \(x \in S\), the filter sets all bits \(A[h_i(x)] \gets 1\). A membership query checks whether all corresponding bits are set:
+\begin{equation}
+B.\texttt{query}(x) =
+\begin{cases}
+    \texttt{true}, & \text{if } A[h_i(x)] = 1 \text{ for all } i,\\[2pt]
+    \texttt{false}, & \text{otherwise.}
+\end{cases}
+\end{equation}
+
+\noindent If at least one bit is zero, the element is definitely absent; if all bits are one, it is \textit{probably present}, with error probability bounded by \(\varepsilon\).
+
+\subsection{Hash Function Family}
+\label{subsec:hashfamily}
+
+\noindent Hash functions play a central role in Bloom filters. In this project, we use the \textbf{Carter--Wegman universal hash family}, defined as:
+
+\begin{equation}
+h_{a,b}(x) = ((a \cdot x + b) \bmod p) \bmod m,
+\label{eq:universal-hash}
+\end{equation}
+
+\noindent where \(a \in \{1, \dots, p-1\}\) and \(b \in \{0, \dots, p-1\}\) are chosen randomly, and \(p\) is a large prime. This family is \textbf{pairwise universal}:
+
+\begin{equation}
+\Pr_{a,b}[h_{a,b}(x) = h_{a,b}(y)] \le \frac{1}{m}, \quad x \neq y,
+\label{eq:probability-collision}
+\end{equation}
+
+\noindent ensuring low collision probability and an approximately uniform distribution of hash values.
+
+\vspace{2em}  % bcs why not
+
+\section{Implementation}
+\label{section:implementation}
+
+\noindent This section describes the key design choices in our implementation.
+
+\subsection{Hash Function Generation}
+\label{subsec:hashgen}
+
+\noindent To obtain sufficiently independent hash functions, the coefficients \(a\) and \(b\) in Equation~\ref{eq:universal-hash} are generated pseudo-randomly. Each pair \((a,b)\) is drawn uniformly from
+
+\[
+a \in \{1, \dots, p-1\}, \qquad b \in \{0, \dots, p-1\},
+\]
+
+\noindent with \(p\) a large prime. \\
+
+\noindent To facilitate efficient modular arithmetic while avoiding overflow, we fix a \textbf{Mersenne prime} \(p = 2^{61} - 1\), which is prime and well-suited for 64-bit computations.\footnote{A \textit{Mersenne prime} is a prime of the form \(2^k - 1\), convenient for modular arithmetic due to its binary structure.} This choice balances numerical stability and performance.
+
+\subsection{Bloom Filter}
+\label{subsec:bloomimpl}
+
+\noindent The Bloom filter is implemented as a \textbf{bit array}, providing compact storage and constant-time access. The structure is parameterized by:
+\begin{itemize}
+    \item \(m\) --- the total number of bits in the filter;
+    \item \(k\) --- the number of hash functions \(h_i\) from Section~\ref{subsec:hashfamily}.
+\end{itemize}
+
+\noindent Each insertion sets bits at positions \(h_i(x)\), and membership queries check whether all relevant bits are set, as formalized in Section~\ref{section:formalisation}.
+
+
+\section{Bounds and Optimality}
+\label{section:bounds}
+
+\noindent Before proceeding to experimentation, we recall the theoretical bounds that govern Bloom filter performance. These results provide reference points for the empirical behaviour observed later.
+
+\subsection{False Positive Probability}
+
+\noindent The false positive probability of a Bloom filter with \( m \) bits, \( k \) independent hash functions, and \( n \) inserted elements is given by:
+\begin{equation}
+P_{\text{fp}} = \left(1 - e^{-kn/m}\right)^k
+\end{equation}
+as first derived by Bloom~\cite{Bloom1970} and further analysed in later studies~\cite{BroderMitzenmacher2004}. This expression shows how the false positive rate depends exponentially on the load factor \( n/m \) and the number of hash functions \( k \).
+
+\subsection{Optimal Parameters}
+
+\noindent The number of hash functions can be tuned to minimize \( P_{\text{fp}} \). The optimal choice, obtained analytically, is:
+
+\begin{equation}
+\label{eq:optimal}
+    k_{\text{opt}} = \frac{m}{n} \ln 2
+\end{equation}
+
+\noindent which corresponds to a situation where approximately half of the bits in the array are set to one. At this point, the minimal achievable false positive rate becomes:
+
+\begin{equation}
+P_{\text{fp,min}} \approx (0.6185)^{m/n}
+\end{equation}
+
+\noindent These results express the fundamental space–accuracy trade-off of Bloom filters and define the theoretical limits our implementation can aim to approach.
+
+
+
+\section{Experiments}
+\label{section:experiments}
+
+\noindent This section outlines the objectives, methodology, and results of our experimental analysis. We aim to empirically validate the theoretical properties of Bloom filters, particularly their false-positive behaviour and the influence of key parameters such as the number of hash functions and the filter’s load factor.
+
+\subsection{Methodology}
+
+\noindent To assess the performance and limitations of our implementation, we conducted two main experiments:
+
+\begin{enumerate}
+    \item \textbf{Growth analysis:} We measured the false-positive rate as the Bloom filter becomes increasingly filled, by gradually inserting \( n \) elements and testing for membership of elements not in the set.
+    \item \textbf{Parameter analysis:} We examined how varying the number of hash functions \( k \) affects the false-positive probability, keeping the Bloom filter size \( m \) and number of inserted elements \( n \) fixed.
+\end{enumerate}
+
+\noindent These experiments allow us to compare empirical results against the theoretical false-positive probability and to evaluate how closely our implementation aligns with this model.
+
+\subsection{Results}
+
+\noindent The results of our experiments are shown in Figure~\ref{fig:fp_combined}.
+
+\begin{figure}[h!]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \includegraphics[width=\linewidth]{FP_vs_n.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \includegraphics[width=\linewidth]{FP_vs_k.png}
+    \end{minipage}
+    \caption{Experimental results: false-positive rate vs number of elements \(n\) (left) and vs number of hash functions \(k\) (right).}
+    \label{fig:fp_combined}
+\end{figure}
+
+\noindent In the \textbf{growth analysis}, the false-positive rate increases steadily as the number of inserted elements \(n\) grows, matching theoretical expectations. For small \(n\), the false-positive probability is negligible; as the load factor \(n/m\) increases, collisions in the bit array become more frequent, causing the rate to rise. Empirical measurements follow the theoretical curve closely, confirming the correctness of the implementation. \\
+
+\noindent In the \textbf{parameter analysis}, varying the number of hash functions \(k\) produces the expected U-shaped behaviour. Too few hash functions leave many bits unset, increasing false positives, while too many hash functions oversaturate the bit array, also raising the rate. The minimum occurs near the theoretical optimal \(k_{\text{opt}} = \frac{m}{n} \ln 2\) (see Equation \ref{eq:optimal}), which our measurements confirm. Slight deviations at high load factors are likely due to finite-size effects and limited randomness. \\
+
+\noindent Overall, the experiments support the theoretical model and demonstrate that the Bloom filter behaves predictably across different parameters.
+
+
+
+
+\section{Use of LLMs}
+
+\noindent In this brief section, we discuss the use of large language models (LLMs) in the context of this project. No LLM was used for the implementation or for understanding the project itself. However, this report was reviewed for syntax and grammar by DeepL as well as a GPT model. It should be noted that none of the information contained in this report was generated by anyone other than the author.
+
+\section{Conclusion}
+
+\noindent This project presented the design, implementation, and evaluation of a Bloom filter using a universal hash family. Both theoretical analysis and experimental results confirm that the filter behaves as expected: the false-positive rate increases with load and exhibits the characteristic U-shaped dependence on the number of hash functions. Optimal parameters closely match theoretical predictions, validating the correctness and efficiency of our implementation.  \\
+
+\noindent Overall, Bloom filters provide a compact and effective probabilistic solution to the membership problem, illustrating the power of randomized algorithms in practical applications.
+
+
+
+% ====================== APPENDIX ======================
+\newpage
+\appendix
+\renewcommand{\thesection}{Appendix \Alph{section}:}  % yeah
+
+\section{Hash Factory Implementation}
+\label{appendix:code}
+
+\noindent Python implementation of universal hash functions and the factory to generate them.
+
+\begin{lstlisting}[language=Python]
+
+import random
+
+class UniversalHash:
+    def __init__(self, p: int, a: int, b: int, m: int):
+        self._p = p
+        self._a = a
+        self._b = b
+        self._m = m
+
+    def __call__(self, value: int) -> int:
+        if value < 0:
+            raise ValueError(f"Value must be non-negative (got {value}).")
+        return ((self._a * value + self._b) % self._p) % self._m
+
+
+class HashFactory:
+    @staticmethod
+    def create(m: int, seed: int = None) -> UniversalHash:
+        rnd = random.Random(seed)
+        p = (1 << 61) - 1
+        a = rnd.randint(1, p - 1)
+        b = rnd.randint(0, p - 1)
+        return UniversalHash(p, a, b, m)
+\end{lstlisting}
+
+
+\section{Bloom Filter Implementation}
+\label{appendix:bloom}
+
+\noindent Python implementation of the Bloom filter using universal hash functions.
+
+\begin{lstlisting}[language=Python]
+
+from bitarray import bitarray
+from . import UniversalHash, HashFactory
+
+class BloomFilter:
+    def __init__(self, m, hash_functions):
+        self._m = m
+        self._hf = hash_functions
+        self._bit_array = bitarray([0] * m)
+
+    @classmethod
+    def New(cls, m, k, seed=None):
+        hash_functions = [
+            HashFactory.create(m, seed + i if seed is not None else None)
+            for i in range(k)
+        ]
+        return cls(m, hash_functions)
+
+    def add(self, x):
+        for index in (hf(x) % self._m for hf in self._hf):
+            self._bit_array[index] = 1
+
+    def query(self, x):
+        return all(self._bit_array[hf(x) % self._m] for hf in self._hf)
+\end{lstlisting}
+
+
+
+% ====================== BIBLIOGRAPHY ======================
+\newpage
+\begin{thebibliography}{9}
+
+\bibitem{Bloom1970}
+B. H. Bloom.
+\textit{Space/Time Trade‐offs in Hash Coding with Allowable Errors.}
+Communications of the ACM, vol. 13, no. 7, pp. 422–426, 1970.
+
+\bibitem{BroderMitzenmacher2004}
+A. Z. Broder and M. Mitzenmacher.
+\textit{Network Applications of Bloom Filters: A Survey.}
+Internet Mathematics, vol. 1, no. 4, pp. 485–509, 2004.
+
+\end{thebibliography}
+
+
+\end{document}

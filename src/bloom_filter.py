@@ -54,7 +54,7 @@ class BloomFilter:
         for index in indices:
             self._bit_array[index] = 1
 
-    def check(self, x: int) -> bool:
+    def query(self, x: int) -> bool:
 
         """Check if an element is possibly in the Bloom filter using the provided hash functions."""
 
