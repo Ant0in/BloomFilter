@@ -13,7 +13,7 @@
 Welcome to my **Bloom Filter** project ! This project is part of the **Randomized Algorithms INFO—F413** at `ULB`. It implements a **Bloom filter** along with a **Hash Factory**, enabling efficient probabilistic membership queries!
 
 <div align="center">
-  <img src="res/FP_vs_k.png" alt="demo" width="400"/>
+  <img src="res/FP_vs_k.png" alt="demo" width="500"/>
   <p><b>Bloom Filter</b> false positive tested <b><code>experimentally</code></b></p>
 </div>
 
@@ -59,3 +59,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 ## 🙏 Acknowledgements
 
 This project was developed for the **`Randomized algorithms`** course **`INFO—F413`**. Special thanks to `*Jean Cardinal* (ULB)` for their guidance and support.
+
